@@ -45,7 +45,7 @@ defmodule ExFairness.MixProject do
       licenses: ["MIT"],
       links: %{
         "GitHub" => @source_url,
-        "Online documentation" => "https://hexdocs.pm/ex_fairness"
+        "Online documentation" => "https://hexdocs.pm/ExFairness"
       },
       maintainers: ["nshkrdotcom"]
     ]
@@ -60,7 +60,7 @@ defmodule ExFairness.MixProject do
       homepage_url: @source_url,
       extras: ["README.md", "CHANGELOG.md"],
       assets: %{"assets" => "assets"},
-      logo: "assets/ex_fairness.svg",
+      logo: "assets/ExFairness.svg",
       before_closing_head_tag: &mermaid_config/1
     ]
   end
