@@ -1,14 +1,17 @@
 <p align="center">
-  <img src="assets/ex_fairness.svg" alt="ExFairness" width="150"/>
+  <img src="assets/ExFairness.svg" alt="ExFairness" width="150"/>
 </p>
 
 # ExFairness
 
-[![Hex.pm](https://img.shields.io/hexpm/v/ex_fairness.svg)](https://hex.pm/packages/ex_fairness)
-[![Documentation](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/ex_fairness)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/North-Shore-AI/ExFairness/blob/main/LICENSE)
-
 **Fairness and Bias Detection Library for Elixir AI/ML Systems**
+
+[![Elixir](https://img.shields.io/badge/elixir-1.14+-purple.svg)](https://elixir-lang.org)
+[![OTP](https://img.shields.io/badge/otp-25+-red.svg)](https://www.erlang.org)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/North-Shore-AI/ExFairness/blob/main/LICENSE)
+[![Documentation](https://img.shields.io/badge/docs-hexdocs-blueviolet.svg)](https://hexdocs.pm/ex_fairness)
+
+---
 
 ExFairness is a comprehensive library for detecting, measuring, and mitigating bias in AI/ML systems built with Elixir. It provides rigorous fairness metrics, bias detection algorithms, and mitigation techniques to ensure your models make equitable predictions across different demographic groups.
 
