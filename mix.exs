@@ -45,7 +45,7 @@ defmodule ExFairness.MixProject do
       licenses: ["MIT"],
       links: %{
         "GitHub" => @source_url,
-        "Online documentation" => "https://hexdocs.pm/ExFairness"
+        "Online documentation" => "https://hexdocs.pm/ex_fairness"
       },
       maintainers: ["nshkrdotcom"]
     ]
