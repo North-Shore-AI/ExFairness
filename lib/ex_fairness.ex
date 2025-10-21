@@ -36,6 +36,7 @@ defmodule ExFairness do
   alias ExFairness.Metrics.EqualizedOdds
   alias ExFairness.Metrics.EqualOpportunity
   alias ExFairness.Metrics.PredictiveParity
+  alias ExFairness.Report
 
   @doc """
   Computes demographic parity disparity between groups.
@@ -146,5 +147,35 @@ defmodule ExFairness do
           PredictiveParity.result()
   def predictive_parity(predictions, labels, sensitive_attr, opts \\ []) do
     PredictiveParity.compute(predictions, labels, sensitive_attr, opts)
+  end
+
+  @doc """
+  Generates a comprehensive fairness report across multiple metrics.
+
+  ## Parameters
+
+    * `predictions` - Binary predictions tensor (0 or 1)
+    * `labels` - Binary labels tensor (0 or 1)
+    * `sensitive_attr` - Binary sensitive attribute tensor (0 or 1)
+    * `opts` - Options (see `ExFairness.Report.generate/4`)
+
+  ## Returns
+
+  A comprehensive fairness report. See `ExFairness.Report.generate/4` for details.
+
+  ## Examples
+
+      iex> predictions = Nx.tensor([1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1])
+      iex> labels = Nx.tensor([1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1])
+      iex> sensitive = Nx.tensor([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+      iex> report = ExFairness.fairness_report(predictions, labels, sensitive)
+      iex> report.total_count
+      4
+
+  """
+  @spec fairness_report(Nx.Tensor.t(), Nx.Tensor.t(), Nx.Tensor.t(), keyword()) ::
+          Report.report()
+  def fairness_report(predictions, labels, sensitive_attr, opts \\ []) do
+    Report.generate(predictions, labels, sensitive_attr, opts)
   end
 end
