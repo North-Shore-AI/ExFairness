@@ -16,7 +16,21 @@ defmodule ExFairness.MixProject do
       docs: docs(),
       source_url: @source_url,
       homepage_url: @source_url,
-      name: "ExFairness"
+      name: "ExFairness",
+      # Quality gates
+      elixirc_options: [warnings_as_errors: true],
+      test_coverage: [tool: ExCoveralls],
+      preferred_cli_env: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.html": :test,
+        "coveralls.json": :test
+      ],
+      dialyzer: [
+        plt_add_apps: [:mix, :ex_unit],
+        plt_core_path: "priv/plts",
+        plt_file: {:no_warn, "priv/plts/dialyzer.plt"}
+      ]
     ]
   end
 
@@ -28,8 +42,15 @@ defmodule ExFairness.MixProject do
 
   defp deps do
     [
+      # Core dependencies
       {:nx, "~> 0.7"},
-      {:ex_doc, "~> 0.31", only: :dev, runtime: false}
+
+      # Development and testing
+      {:ex_doc, "~> 0.31", only: :dev, runtime: false},
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
+      {:excoveralls, "~> 0.18", only: :test},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:stream_data, "~> 1.0", only: :test}
     ]
   end
 
