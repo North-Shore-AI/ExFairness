@@ -1,7 +1,7 @@
 defmodule ExFairness.MixProject do
   use Mix.Project
 
-  @version "0.1.0"
+  @version "0.2.0"
   @source_url "https://github.com/North-Shore-AI/ExFairness"
 
   def project do
@@ -62,11 +62,12 @@ defmodule ExFairness.MixProject do
     [
       name: "ex_fairness",
       description: description(),
-      files: ~w(lib mix.exs README.md CHANGELOG.md LICENSE),
+      files: ~w(lib mix.exs README.md CHANGELOG.md LICENSE docs),
       licenses: ["MIT"],
       links: %{
         "GitHub" => @source_url,
-        "Online documentation" => "https://hexdocs.pm/ex_fairness"
+        "Online documentation" => "https://hexdocs.pm/ex_fairness",
+        "Technical Documentation" => "#{@source_url}/tree/main/docs/20251020"
       },
       maintainers: ["nshkrdotcom"]
     ]
@@ -79,7 +80,57 @@ defmodule ExFairness.MixProject do
       source_ref: "v#{@version}",
       source_url: @source_url,
       homepage_url: @source_url,
-      extras: ["README.md", "CHANGELOG.md"],
+      extras: [
+        "README.md",
+        "CHANGELOG.md",
+        "docs/architecture.md",
+        "docs/metrics.md",
+        "docs/algorithms.md",
+        "docs/roadmap.md",
+        "docs/20251020/future_directions.md",
+        "docs/20251020/implementation_report.md",
+        "docs/20251020/testing_and_qa_strategy.md"
+      ],
+      groups_for_extras: [
+        "Getting Started": ["README.md"],
+        Architecture: [
+          "docs/architecture.md",
+          "docs/metrics.md",
+          "docs/algorithms.md"
+        ],
+        Planning: [
+          "docs/roadmap.md",
+          "docs/20251020/future_directions.md"
+        ],
+        "Technical Reports": [
+          "docs/20251020/implementation_report.md",
+          "docs/20251020/testing_and_qa_strategy.md"
+        ],
+        Changelog: ["CHANGELOG.md"]
+      ],
+      groups_for_modules: [
+        "Fairness Metrics": [
+          ExFairness.Metrics.DemographicParity,
+          ExFairness.Metrics.EqualizedOdds,
+          ExFairness.Metrics.EqualOpportunity,
+          ExFairness.Metrics.PredictiveParity
+        ],
+        Detection: [
+          ExFairness.Detection.DisparateImpact
+        ],
+        Mitigation: [
+          ExFairness.Mitigation.Reweighting
+        ],
+        Reporting: [
+          ExFairness.Report
+        ],
+        Utilities: [
+          ExFairness.Utils,
+          ExFairness.Utils.Metrics,
+          ExFairness.Validation,
+          ExFairness.Error
+        ]
+      ],
       assets: %{"assets" => "assets"},
       logo: "assets/ExFairness.svg",
       before_closing_head_tag: &mermaid_config/1
