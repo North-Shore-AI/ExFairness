@@ -62,7 +62,7 @@ defmodule ExFairness.MixProject do
     [
       name: "ex_fairness",
       description: description(),
-      files: ~w(lib mix.exs README.md CHANGELOG.md LICENSE docs),
+      files: ~w(lib mix.exs README.md CHANGELOG.md CONTRIBUTING.md LICENSE docs),
       licenses: ["MIT"],
       links: %{
         "GitHub" => @source_url,
@@ -83,6 +83,7 @@ defmodule ExFairness.MixProject do
       extras: [
         "README.md",
         "CHANGELOG.md",
+        "CONTRIBUTING.md",
         "docs/architecture.md",
         "docs/metrics.md",
         "docs/algorithms.md",
@@ -92,7 +93,7 @@ defmodule ExFairness.MixProject do
         "docs/20251020/testing_and_qa_strategy.md"
       ],
       groups_for_extras: [
-        "Getting Started": ["README.md"],
+        "Getting Started": ["README.md", "CONTRIBUTING.md"],
         Architecture: [
           "docs/architecture.md",
           "docs/metrics.md",
