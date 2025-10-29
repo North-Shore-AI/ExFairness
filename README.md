@@ -1356,6 +1356,38 @@ In *2018 IEEE/ACM International Workshop on Software Fairness* (FairWare), pp. 1
 - ✅ **BEAM concurrency** - parallel fairness analysis
 - ✅ **Production-ready** from day one
 
+## Examples
+
+ExFairness includes comprehensive, runnable examples demonstrating all features:
+
+```bash
+# Run individual examples
+mix run examples/01_demographic_parity.exs
+mix run examples/02_equalized_odds.exs
+mix run examples/03_equal_opportunity.exs
+mix run examples/04_predictive_parity.exs
+mix run examples/05_comprehensive_report.exs
+mix run examples/06_disparate_impact.exs
+mix run examples/07_mitigation_reweighting.exs
+mix run examples/08_end_to_end_workflow.exs
+
+# Run all examples
+for f in examples/*.exs; do echo "Running $f"; mix run "$f"; done
+```
+
+### Example Overview
+
+- **01_demographic_parity.exs**: Demonstrates demographic parity metric with fair and biased scenarios
+- **02_equalized_odds.exs**: Shows equalized odds analysis for medical diagnosis and criminal justice
+- **03_equal_opportunity.exs**: Illustrates equal opportunity in college admissions and hiring
+- **04_predictive_parity.exs**: Explains predictive parity for credit scoring and risk assessment
+- **05_comprehensive_report.exs**: Generates multi-metric reports with Markdown and JSON export
+- **06_disparate_impact.exs**: Legal compliance checking with EEOC 80% rule
+- **07_mitigation_reweighting.exs**: Complete bias mitigation workflow using reweighting
+- **08_end_to_end_workflow.exs**: Full fairness workflow from detection to deployment
+
+Each example includes detailed explanations, multiple scenarios, and best practices for responsible AI.
+
 ## Development
 
 ### Running Tests
