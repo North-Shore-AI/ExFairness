@@ -7,9 +7,10 @@
 **Fairness and Bias Detection Library for Elixir AI/ML Systems**
 
 [![Elixir](https://img.shields.io/badge/elixir-1.14+-purple.svg)](https://elixir-lang.org)
-[![OTP](https://img.shields.io/badge/otp-25+-red.svg)](https://www.erlang.org)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/North-Shore-AI/ExFairness/blob/main/LICENSE)
-[![Documentation](https://img.shields.io/badge/docs-hexdocs-blueviolet.svg)](https://hexdocs.pm/ex_fairness)
+[![OTP](https://img.shields.io/badge/otp-25+-blue.svg)](https://www.erlang.org)
+[![Hex.pm](https://img.shields.io/hexpm/v/ex_fairness.svg)](https://hex.pm/packages/ex_fairness)
+[![Documentation](https://img.shields.io/badge/docs-hexdocs-purple.svg)](https://hexdocs.pm/ex_fairness)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/North-Shore-AI/ExFairness/blob/main/LICENSE)
 
 ---
 
