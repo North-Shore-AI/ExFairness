@@ -16,15 +16,28 @@ defmodule ExFairness.Report do
 
   """
 
-  alias ExFairness.Metrics.{DemographicParity, EqualizedOdds, EqualOpportunity, PredictiveParity}
+  alias ExFairness.Metrics.{
+    Calibration,
+    DemographicParity,
+    EqualizedOdds,
+    EqualOpportunity,
+    PredictiveParity
+  }
 
-  @available_metrics [:demographic_parity, :equalized_odds, :equal_opportunity, :predictive_parity]
+  @all_metrics [
+    :demographic_parity,
+    :equalized_odds,
+    :equal_opportunity,
+    :predictive_parity,
+    :calibration
+  ]
 
   @type report :: %{
           optional(:demographic_parity) => DemographicParity.result(),
           optional(:equalized_odds) => EqualizedOdds.result(),
           optional(:equal_opportunity) => EqualOpportunity.result(),
           optional(:predictive_parity) => PredictiveParity.result(),
+          optional(:calibration) => Calibration.result(),
           overall_assessment: String.t(),
           passed_count: non_neg_integer(),
           failed_count: non_neg_integer(),
@@ -40,9 +53,15 @@ defmodule ExFairness.Report do
     * `labels` - Binary labels tensor (0 or 1)
     * `sensitive_attr` - Binary sensitive attribute tensor (0 or 1)
     * `opts` - Options:
-      * `:metrics` - List of metrics to include (default: all available)
+      * `:metrics` - List of metrics to include (default: all available, calibration only when `:probabilities` is provided)
       * `:threshold` - Fairness threshold to pass to all metrics
       * `:min_per_group` - Minimum samples per group
+      * `:probabilities` - Predicted probabilities (required for `:calibration`)
+      * CI/testing options forwarded to metrics:
+        * `:include_ci` - Enable bootstrap confidence intervals
+        * `:bootstrap_samples`, `:confidence_level`, `:stratified`
+        * `:statistical_test` - e.g., :z_test | :chi_square | :permutation
+        * `:alpha`, `:n_permutations`
 
   ## Returns
 
@@ -65,7 +84,7 @@ defmodule ExFairness.Report do
   """
   @spec generate(Nx.Tensor.t(), Nx.Tensor.t(), Nx.Tensor.t(), keyword()) :: report()
   def generate(predictions, labels, sensitive_attr, opts \\ []) do
-    metrics = Keyword.get(opts, :metrics, @available_metrics)
+    metrics = Keyword.get(opts, :metrics, default_metrics(opts))
 
     # Compute each requested metric
     results =
@@ -180,6 +199,24 @@ defmodule ExFairness.Report do
     PredictiveParity.compute(predictions, labels, sensitive_attr, opts)
   end
 
+  defp compute_metric(:calibration, _predictions, labels, sensitive_attr, opts) do
+    probabilities =
+      Keyword.get(opts, :probabilities) ||
+        raise ArgumentError,
+              ":probabilities option is required when requesting :calibration in fairness_report/4"
+
+    calibration = Calibration.compute(probabilities, labels, sensitive_attr, opts)
+
+    reliability =
+      if Keyword.get(opts, :include_reliability, true) do
+        Calibration.reliability_diagram(probabilities, labels, sensitive_attr, opts)
+      else
+        nil
+      end
+
+    Map.put(calibration, :reliability_diagram, reliability)
+  end
+
   @spec generate_overall_assessment(non_neg_integer(), non_neg_integer(), non_neg_integer()) ::
           String.t()
   defp generate_overall_assessment(passed, _failed, total) when passed == total do
@@ -196,23 +233,55 @@ defmodule ExFairness.Report do
 
   @spec format_metrics_table(report()) :: String.t()
   defp format_metrics_table(report) do
-    @available_metrics
-    |> Enum.filter(&Map.has_key?(report, &1))
-    |> Enum.map(fn metric ->
-      result = Map.get(report, metric)
-      passes = if result.passes, do: "✓", else: "✗"
-      disparity = get_primary_disparity(metric, result)
-      threshold = result.threshold
+    metrics = metrics_in_report(report)
+    include_ci? = has_confidence_intervals?(report, metrics)
+    include_p? = has_p_values?(report, metrics)
 
-      "| #{format_metric_name(metric)} | #{passes} | #{Float.round(disparity, 3)} | #{Float.round(threshold, 3)} |"
-    end)
-    |> Enum.join("\n")
+    header =
+      ["Metric", "Passes", "Disparity", "Threshold"]
+      |> maybe_append(include_ci?, "CI")
+      |> maybe_append(include_p?, "p-value")
+      |> Enum.join(" | ")
+
+    separator =
+      ["--------", "------", "---------", "----------"]
+      |> maybe_append(include_ci?, "----")
+      |> maybe_append(include_p?, "-------")
+      |> Enum.join(" | ")
+
+    rows =
+      metrics
+      |> Enum.map(fn metric ->
+        result = Map.get(report, metric)
+        passes = if result.passes, do: "✓", else: "✗"
+        disparity = get_primary_disparity(metric, result)
+        threshold = result.threshold
+
+        base = [
+          format_metric_name(metric),
+          passes,
+          Float.round(disparity, 3),
+          Float.round(threshold, 3)
+        ]
+
+        base
+        |> maybe_append(include_ci?, format_ci(result))
+        |> maybe_append(include_p?, format_p_value(result))
+        |> Enum.join(" | ")
+      end)
+      |> Enum.map(&("| " <> &1 <> " |"))
+      |> Enum.join("\n")
+
+    """
+    | #{header} |
+    | #{separator} |
+    #{rows}
+    """
   end
 
   @spec format_detailed_results(report()) :: String.t()
   defp format_detailed_results(report) do
-    @available_metrics
-    |> Enum.filter(&Map.has_key?(report, &1))
+    metrics_in_report(report)
     |> Enum.map(fn metric ->
       result = Map.get(report, metric)
 
@@ -222,6 +291,9 @@ defmodule ExFairness.Report do
       **Status:** #{if result.passes, do: "✓ Passed", else: "✗ Failed"}
 
       #{result.interpretation}
+      #{format_ci_block(result)}
+      #{format_p_value_block(result)}
+      #{format_reliability(metric, result)}
       """
     end)
     |> Enum.join("\n")
@@ -232,6 +304,7 @@ defmodule ExFairness.Report do
   defp format_metric_name(:equalized_odds), do: "Equalized Odds"
   defp format_metric_name(:equal_opportunity), do: "Equal Opportunity"
   defp format_metric_name(:predictive_parity), do: "Predictive Parity"
+  defp format_metric_name(:calibration), do: "Calibration Fairness"
 
   @spec get_primary_disparity(atom(), map()) :: float()
   defp get_primary_disparity(:demographic_parity, result), do: result.disparity
@@ -241,4 +314,108 @@ defmodule ExFairness.Report do
   defp get_primary_disparity(:equalized_odds, result) do
     max(result.tpr_disparity, result.fpr_disparity)
   end
+
+  defp get_primary_disparity(:calibration, result), do: result.disparity
+
+  defp metrics_in_report(report) do
+    report
+    |> Map.keys()
+    |> Enum.filter(&(&1 in @all_metrics))
+  end
+
+  defp default_metrics(opts) do
+    if Keyword.has_key?(opts, :probabilities) do
+      @all_metrics
+    else
+      @all_metrics -- [:calibration]
+    end
+  end
+
+  defp format_reliability(:calibration, %{reliability_diagram: diagram}) do
+    if diagram do
+      rows =
+        diagram.bins
+        |> Enum.map(fn bin ->
+          {low, high} = bin.range
+
+          [
+            "#{bin.bin_index}",
+            "[#{Float.round(low, 3)}, #{Float.round(high, 3)})",
+            bin.group_a.count,
+            Float.round(bin.group_a.confidence, 3),
+            Float.round(bin.group_a.accuracy, 3),
+            bin.group_b.count,
+            Float.round(bin.group_b.confidence, 3),
+            Float.round(bin.group_b.accuracy, 3)
+          ]
+          |> Enum.join(" | ")
+        end)
+        |> Enum.join("\n")
+
+      """
+      \n**Calibration Reliability Diagram** (#{diagram.strategy} bins = #{diagram.n_bins})
+
+      | Bin | Range | A Count | A Conf | A Acc | B Count | B Conf | B Acc |
+      |-----|-------|---------|--------|-------|---------|--------|-------|
+      #{rows}
+      """
+    else
+      ""
+    end
+  end
+
+  defp format_reliability(_metric, _result), do: ""
+
+  defp format_ci(result) do
+    case Map.get(result, :confidence_interval) do
+      {low, high} -> "[#{Float.round(low, 3)}, #{Float.round(high, 3)}]"
+      _ -> "-"
+    end
+  end
+
+  defp format_ci_block(result) do
+    case Map.get(result, :confidence_interval) do
+      {low, high} ->
+        "\n**Confidence interval:** [#{Float.round(low, 4)}, #{Float.round(high, 4)}]"
+
+      _ ->
+        ""
+    end
+  end
+
+  defp format_p_value(result) do
+    case Map.get(result, :p_value) do
+      p when is_number(p) -> Float.round(p, 4)
+      _ -> "-"
+    end
+  end
+
+  defp format_p_value_block(result) do
+    case Map.get(result, :p_value) do
+      p when is_number(p) ->
+        sig = Map.get(result, :significant)
+        conclusion = if is_boolean(sig), do: " (significant? #{sig})", else: ""
+        "\n**p-value:** #{Float.round(p, 4)}#{conclusion}"
+
+      _ ->
+        ""
+    end
+  end
+
+  defp has_confidence_intervals?(report, metrics) do
+    Enum.any?(metrics, fn metric ->
+      result = Map.get(report, metric)
+      match?({_, _}, Map.get(result, :confidence_interval))
+    end)
+  end
+
+  defp has_p_values?(report, metrics) do
+    Enum.any?(metrics, fn metric ->
+      result = Map.get(report, metric)
+      is_number(Map.get(result, :p_value))
+    end)
+  end
+
+  defp maybe_append(list, true, value), do: list ++ [value]
+  defp maybe_append(list, false, _value), do: list
 end

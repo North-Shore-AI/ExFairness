@@ -26,3 +26,6 @@ ex_fairness-*/
 /tmp/
 
 repomix*.xml
+
+# Dialyzer PLT cache
+priv/plts/

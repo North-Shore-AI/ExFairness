@@ -24,6 +24,12 @@ ExFairness is a comprehensive library for detecting, measuring, and mitigating b
 - **Equalized Odds**: Ensures equal true positive and false positive rates across groups
 - **Equal Opportunity**: Ensures equal true positive rates across groups (recall parity)
 - **Predictive Parity**: Ensures equal positive predictive values (precision parity)
+- **Calibration Fairness**: Probability predictions are equally calibrated across groups (ECE/MCE)
+
+### ✅ Statistical Inference (Implemented)
+
+- **Bootstrap Confidence Intervals**: Percentile/basic CIs with stratified resampling
+- **Hypothesis Testing**: Two-proportion z-test, chi-square, and permutation tests with effect sizes
 
 ### ✅ Bias Detection (Implemented)
 
@@ -41,10 +47,8 @@ ExFairness is a comprehensive library for detecting, measuring, and mitigating b
 
 ### 🚧 Coming Soon
 
-- **Calibration**: Predicted probabilities match actual outcomes across groups
 - **Individual Fairness**: Similar individuals receive similar predictions
 - **Counterfactual Fairness**: Causal fairness analysis
-- **Statistical Testing**: Hypothesis tests for fairness violations
 - **Intersectional Analysis**: Multi-attribute fairness
 - **Temporal Monitoring**: Fairness drift detection
 - **Resampling**: Oversampling and undersampling techniques
@@ -65,7 +69,7 @@ Add `ex_fairness` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:ex_fairness, "~> 0.1.0"}
+    {:ex_fairness, "~> 0.3.0"}
   ]
 end
 ```
@@ -122,6 +126,103 @@ result = ExFairness.equalized_odds(predictions, labels, sensitive_attr)
 # }
 ```
 
+### Assess Calibration Fairness
+
+```elixir
+# Probabilistic predictions, labels, and sensitive attribute
+probabilities = Nx.tensor([0.1, 0.3, 0.6, 0.9, 0.2, 0.4, 0.7, 0.8, 0.5, 0.3,
+                           0.1, 0.3, 0.6, 0.9, 0.2, 0.4, 0.7, 0.8, 0.5, 0.3])
+labels = Nx.tensor([0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0])
+sensitive_attr = Nx.tensor([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+
+calibration = ExFairness.Metrics.Calibration.compute(
+  probabilities,
+  labels,
+  sensitive_attr,
+  n_bins: 10,
+  strategy: :uniform,    # or :quantile
+  threshold: 0.1         # max acceptable ECE disparity
+)
+
+calibration.disparity    # |ECE_A - ECE_B|
+calibration.group_a_ece  # expected calibration error for group A
+calibration.group_b_mce  # maximum calibration error for group B
+calibration.passes       # true if disparity <= threshold
+IO.puts(calibration.interpretation)
+
+# Shortcut helper
+calibration = ExFairness.calibration(probabilities, labels, sensitive_attr)
+```
+
+### Statistical Inference (Confidence Intervals & Tests)
+
+#### Bootstrap confidence intervals for any metric
+
+```elixir
+predictions = Nx.tensor([1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0])
+sensitive_attr = Nx.tensor([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+
+# metric_fn must return a numeric statistic (here: demographic parity disparity)
+metric_fn = fn [preds, sens] ->
+  ExFairness.demographic_parity(preds, sens).disparity
+end
+
+ci = ExFairness.Utils.Bootstrap.confidence_interval(
+  [predictions, sensitive_attr],
+  metric_fn,
+  n_samples: 1000,
+  confidence_level: 0.95,
+  stratified: true,
+  method: :percentile,
+  seed: 42
+)
+
+ci.point_estimate       # observed disparity
+ci.confidence_interval  # {lower, upper}
+ci.method               # :percentile or :basic
+```
+
+#### Hypothesis testing for group disparities
+
+```elixir
+predictions = Nx.tensor([1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+sensitive_attr = Nx.tensor([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+
+# Two-proportion z-test (demographic parity)
+z_result =
+  ExFairness.Utils.StatisticalTests.two_proportion_test(
+    predictions,
+    sensitive_attr,
+    alpha: 0.05,
+    alternative: :two_sided
+  )
+
+z_result.p_value
+z_result.effect_size    # Cohen's h
+z_result.significant
+
+# Permutation test for any metric (example: TPR disparity from equalized odds)
+labels = Nx.tensor([1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1])
+
+perm_result =
+  ExFairness.Utils.StatisticalTests.permutation_test(
+    [predictions, labels, sensitive_attr],
+    fn [preds, labs, sens] ->
+      ExFairness.equalized_odds(preds, labs, sens).tpr_disparity
+    end,
+    n_permutations: 1000,
+    alpha: 0.05,
+    alternative: :two_sided,
+    seed: 1234
+  )
+
+perm_result.p_value
+perm_result.significant
+IO.puts(perm_result.interpretation)
+```
+
+For error-rate disparities (equalized odds), use `ExFairness.Utils.StatisticalTests.chi_square_test/4` with `predictions`, `labels`, and `sensitive_attr`.
+
 ### Comprehensive Fairness Report
 
 ```elixir
@@ -140,6 +241,25 @@ report = ExFairness.fairness_report(predictions, labels, sensitive_attr,
 #   total_count: 4
 # }
 
+# Include calibration in the report by supplying probabilities:
+# report = ExFairness.fairness_report(predictions, labels, sensitive_attr,
+#   probabilities: probs_tensor,
+#   metrics: [:demographic_parity, :equalized_odds, :calibration]
+# )
+# If you pass `probabilities:` and don’t specify `:metrics`, calibration is included by default.
+# To enable statistical inference across metrics, pass `include_ci: true` and `statistical_test: :permutation | :z_test | :chi_square`.
+# You can skip reliability-diagram computation (for speed) with `include_reliability: false`.
+
+# Statistical inference across metrics (adds CI/p-value columns in markdown):
+# report = ExFairness.fairness_report(predictions, labels, sensitive_attr,
+#   probabilities: probs_tensor,
+#   include_ci: true,
+#   statistical_test: :permutation,
+#   bootstrap_samples: 500,
+#   n_permutations: 2000,
+#   include_reliability: false  # skip bin details if you only need headline calibration
+# )
+
 # Export to Markdown
 markdown = ExFairness.Report.to_markdown(report)
 File.write!("fairness_report.md", markdown)
@@ -147,6 +267,9 @@ File.write!("fairness_report.md", markdown)
 # Export to JSON
 json = ExFairness.Report.to_json(report)
 File.write!("fairness_report.json", json)
+
+# Calibration reliability detail is included in the report when calibration runs:
+# report.calibration.reliability_diagram.bins
 ```
 
 ## Bias Detection

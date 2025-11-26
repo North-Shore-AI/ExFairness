@@ -35,6 +35,7 @@ defmodule ExFairness do
   alias ExFairness.Metrics.DemographicParity
   alias ExFairness.Metrics.EqualizedOdds
   alias ExFairness.Metrics.EqualOpportunity
+  alias ExFairness.Metrics.Calibration
   alias ExFairness.Metrics.PredictiveParity
   alias ExFairness.Report
 
@@ -150,6 +151,36 @@ defmodule ExFairness do
   end
 
   @doc """
+  Computes calibration fairness between groups using predicted probabilities.
+
+  Calibration checks whether predicted probabilities align with actual outcomes
+  equally across groups, reporting ECE/MCE per group and the disparity.
+
+  ## Parameters
+
+    * `probabilities` - Predicted probabilities (0.0 to 1.0)
+    * `labels` - Binary labels tensor (0 or 1)
+    * `sensitive_attr` - Binary sensitive attribute tensor (0 or 1)
+    * `opts` - Options (see `ExFairness.Metrics.Calibration.compute/4`)
+
+  ## Examples
+
+      iex> probs = Nx.tensor([0.1, 0.3, 0.6, 0.9, 0.2, 0.4, 0.7, 0.8, 0.5, 0.3,
+      ...>                    0.1, 0.3, 0.6, 0.9, 0.2, 0.4, 0.7, 0.8, 0.5, 0.3])
+      iex> labels = Nx.tensor([0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0])
+      iex> sensitive = Nx.tensor([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+      iex> result = ExFairness.calibration(probs, labels, sensitive, n_bins: 5)
+      iex> result.passes
+      true
+
+  """
+  @spec calibration(Nx.Tensor.t(), Nx.Tensor.t(), Nx.Tensor.t(), keyword()) ::
+          Calibration.result()
+  def calibration(probabilities, labels, sensitive_attr, opts \\ []) do
+    Calibration.compute(probabilities, labels, sensitive_attr, opts)
+  end
+
+  @doc """
   Generates a comprehensive fairness report across multiple metrics.
 
   ## Parameters
@@ -157,7 +188,7 @@ defmodule ExFairness do
     * `predictions` - Binary predictions tensor (0 or 1)
     * `labels` - Binary labels tensor (0 or 1)
     * `sensitive_attr` - Binary sensitive attribute tensor (0 or 1)
-    * `opts` - Options (see `ExFairness.Report.generate/4`)
+    * `opts` - Options (see `ExFairness.Report.generate/4`). To include calibration, pass `probabilities: probs`.
 
   ## Returns
 

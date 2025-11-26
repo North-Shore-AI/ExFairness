@@ -1,7 +1,7 @@
 defmodule ExFairness.MixProject do
   use Mix.Project
 
-  @version "0.2.0"
+  @version "0.3.0"
   @source_url "https://github.com/North-Shore-AI/ExFairness"
 
   def project do
@@ -115,7 +115,8 @@ defmodule ExFairness.MixProject do
           ExFairness.Metrics.DemographicParity,
           ExFairness.Metrics.EqualizedOdds,
           ExFairness.Metrics.EqualOpportunity,
-          ExFairness.Metrics.PredictiveParity
+          ExFairness.Metrics.PredictiveParity,
+          ExFairness.Metrics.Calibration
         ],
         Detection: [
           ExFairness.Detection.DisparateImpact
@@ -129,6 +130,8 @@ defmodule ExFairness.MixProject do
         Utilities: [
           ExFairness.Utils,
           ExFairness.Utils.Metrics,
+          ExFairness.Utils.Bootstrap,
+          ExFairness.Utils.StatisticalTests,
           ExFairness.Validation,
           ExFairness.Error
         ]
