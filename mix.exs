@@ -43,6 +43,7 @@ defmodule ExFairness.MixProject do
   defp deps do
     [
       # Core dependencies
+      {:jason, "~> 1.4"},
       {:nx, "~> 0.7"},
 
       # Development and testing
