@@ -39,6 +39,9 @@ defmodule ExFairness do
   alias ExFairness.Metrics.PredictiveParity
   alias ExFairness.Report
 
+  # Support for CrucibleIR integration (conditionally compiled)
+  # The evaluate/5 function is only available when crucible_ir is loaded
+
   @doc """
   Computes demographic parity disparity between groups.
 
@@ -208,5 +211,109 @@ defmodule ExFairness do
           Report.report()
   def fairness_report(predictions, labels, sensitive_attr, opts \\ []) do
     Report.generate(predictions, labels, sensitive_attr, opts)
+  end
+
+  @doc """
+  Evaluates fairness using a CrucibleIR.Reliability.Fairness configuration.
+
+  This function provides a bridge between the Crucible framework and ExFairness,
+  allowing fairness evaluation to be configured using CrucibleIR's configuration
+  structures.
+
+  Note: This function is available when the `crucible_ir` dependency is loaded.
+
+  ## Parameters
+
+    * `predictions` - Binary predictions tensor (0 or 1)
+    * `labels` - Binary labels tensor (0 or 1)
+    * `sensitive_attr` - Binary sensitive attribute tensor (0 or 1)
+    * `config` - CrucibleIR.Reliability.Fairness configuration struct
+    * `probabilities` - (Optional) Prediction probabilities for calibration metrics
+
+  ## Returns
+
+  A map containing:
+    * `:metrics` - Map of metric results for each configured metric
+    * `:overall_passes` - Boolean indicating if all metrics pass
+    * `:violations` - List of metrics that failed to pass
+
+  ## Examples
+
+      iex> config = %CrucibleIR.Reliability.Fairness{
+      ...>   enabled: true,
+      ...>   metrics: [:demographic_parity],
+      ...>   threshold: 0.1
+      ...> }
+      iex> predictions = Nx.tensor([1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0])
+      iex> labels = Nx.tensor([1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1])
+      iex> sensitive = Nx.tensor([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+      iex> result = ExFairness.evaluate(predictions, labels, sensitive, config)
+      iex> result.overall_passes
+      true
+
+  """
+  @spec evaluate(Nx.Tensor.t(), Nx.Tensor.t(), Nx.Tensor.t(), struct(), Nx.Tensor.t() | nil) ::
+          %{
+            metrics: map(),
+            overall_passes: boolean(),
+            violations: list(map())
+          }
+  def evaluate(predictions, labels, sensitive_attr, config, probabilities \\ nil)
+
+  def evaluate(
+        predictions,
+        labels,
+        sensitive_attr,
+        %{__struct__: CrucibleIR.Reliability.Fairness} = config,
+        probabilities
+      ) do
+    unless config.enabled do
+      %{metrics: %{}, overall_passes: true, violations: []}
+    else
+      extra_opts = if config.options, do: Map.to_list(config.options), else: []
+      opts = [threshold: config.threshold] ++ extra_opts
+
+      # Compute each requested metric
+      metrics_results =
+        Enum.reduce(config.metrics, %{}, fn metric, acc ->
+          result =
+            case metric do
+              :demographic_parity ->
+                demographic_parity(predictions, sensitive_attr, opts)
+
+              :equalized_odds ->
+                equalized_odds(predictions, labels, sensitive_attr, opts)
+
+              :equal_opportunity ->
+                equal_opportunity(predictions, labels, sensitive_attr, opts)
+
+              :predictive_parity ->
+                predictive_parity(predictions, labels, sensitive_attr, opts)
+
+              :calibration when not is_nil(probabilities) ->
+                calibration(probabilities, labels, sensitive_attr, opts)
+
+              :calibration ->
+                %{error: "Calibration requires probabilities", passes: false}
+
+              _ ->
+                %{error: "Unknown metric: #{metric}", passes: false}
+            end
+
+          Map.put(acc, metric, result)
+        end)
+
+      # Identify violations
+      violations =
+        metrics_results
+        |> Enum.filter(fn {_metric, result} -> not Map.get(result, :passes, false) end)
+        |> Enum.map(fn {metric, result} -> %{metric: metric, details: result} end)
+
+      %{
+        metrics: metrics_results,
+        overall_passes: Enum.empty?(violations),
+        violations: violations
+      }
+    end
   end
 end

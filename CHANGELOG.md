@@ -7,13 +7,128 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Planned for v0.4.0
+### Planned for v0.5.0
 - Intersectional fairness analysis
 - Threshold optimization (post-processing mitigation)
 - Integration tests with real datasets (Adult, COMPAS, German Credit)
 - Property-based testing with StreamData
 - Performance benchmarking suite
 - Multi-class fairness support
+
+## [0.4.0] - 2025-11-26
+
+### Added - CrucibleIR Integration
+
+**Pipeline Stage:**
+- **ExFairness.Stage** - Pipeline stage for Crucible framework integration
+  - Seamless integration with CrucibleIR experiment orchestration
+  - Accepts `CrucibleIR.Reliability.Fairness` configuration
+  - Extracts predictions, labels, and sensitive attributes from model outputs
+  - Supports all ExFairness metrics (demographic parity, equalized odds, equal opportunity, predictive parity, calibration)
+  - Configurable threshold and fail-on-violation behavior
+  - Comprehensive error handling and validation
+  - Returns structured fairness results with violations tracking
+
+**Main API Enhancement:**
+- **ExFairness.evaluate/5** - New function for CrucibleIR config-based evaluation
+  - Direct evaluation using `CrucibleIR.Reliability.Fairness` struct
+  - Optional probabilities parameter for calibration metrics
+  - Returns structured results with metrics, violations, and overall pass/fail status
+  - Conditionally compiled (only when crucible_ir is available)
+
+### Configuration Support
+
+The integration supports the following `CrucibleIR.Reliability.Fairness` structure:
+
+```elixir
+%CrucibleIR.Reliability.Fairness{
+  enabled: true,                    # Enable/disable fairness evaluation
+  metrics: [:demographic_parity, :equalized_odds, :equal_opportunity, :predictive_parity, :calibration],
+  group_by: :gender,                # Sensitive attribute field name
+  threshold: 0.1,                   # Maximum acceptable disparity
+  fail_on_violation: false,         # Whether to fail on violations
+  options: %{}                      # Additional metric-specific options
+}
+```
+
+### Testing
+
+**New Test Suite:**
+- ExFairness.StageTest - 15 comprehensive tests
+  - Stage description validation
+  - Disabled fairness pass-through
+  - Single and multiple metric evaluation
+  - Calibration with/without probabilities
+  - Custom threshold configuration
+  - Violation detection and reporting
+  - Fail-on-violation behavior
+  - Invalid context handling
+  - Unknown metric handling
+  - Custom options pass-through
+
+**Test Coverage:** 174 (v0.3.0) → 189 (v0.4.0) = +15 tests (+8.6%)
+
+### Dependencies
+
+**New Dependencies:**
+- `{:crucible_ir, "~> 0.1.1"}` - CrucibleIR configuration structs
+
+### Documentation
+
+**Updated Documentation:**
+- mix.exs - Added ExFairness.Stage to Pipeline module group
+- README.md - Added Stage usage examples and CrucibleIR integration guide
+- ExFairness.Stage - Comprehensive module documentation with examples
+- ExFairness.evaluate/5 - Full API documentation with examples
+
+### Quality Metrics
+
+- **Zero compilation warnings** (enforced via warnings_as_errors)
+- **Zero Dialyzer errors** (type-safe)
+- **All tests passing** (189 total tests)
+- **Backward compatible:** All v0.3.0 code works without modification
+
+### Integration Benefits
+
+1. **Seamless Crucible Integration**: ExFairness can now be used as a pipeline stage in Crucible experiments
+2. **Standardized Configuration**: Uses CrucibleIR configuration structs for consistency
+3. **Experiment Orchestration**: Fairness evaluation can be automated as part of experiment pipelines
+4. **Flexible Violation Handling**: Choose whether fairness violations should fail experiments
+5. **Comprehensive Results**: Structured output suitable for experiment reporting
+
+### Example Usage
+
+```elixir
+# Configure fairness evaluation
+config = %CrucibleIR.Reliability.Fairness{
+  enabled: true,
+  metrics: [:demographic_parity, :equalized_odds],
+  group_by: :gender,
+  threshold: 0.1,
+  fail_on_violation: false
+}
+
+# In a Crucible pipeline
+context = %{
+  experiment: %{reliability: %{fairness: config}},
+  outputs: model_outputs  # List of maps with :prediction, :label, :gender
+}
+
+{:ok, result_context} = ExFairness.Stage.run(context)
+# result_context.fairness contains fairness evaluation results
+
+# Or use the direct evaluation API
+result = ExFairness.evaluate(predictions, labels, sensitive_attr, config)
+# Returns %{metrics: ..., overall_passes: ..., violations: ...}
+```
+
+### Breaking Changes
+
+**None** - This is a backward compatible release. All existing code continues to work unchanged.
+
+### Migration from v0.3.0
+
+No code changes required. The new CrucibleIR integration is opt-in and does not affect existing usage patterns.
 
 ## [0.3.0] - 2025-11-25
 

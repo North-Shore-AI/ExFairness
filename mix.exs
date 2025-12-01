@@ -1,7 +1,7 @@
 defmodule ExFairness.MixProject do
   use Mix.Project
 
-  @version "0.3.0"
+  @version "0.4.0"
   @source_url "https://github.com/North-Shore-AI/ExFairness"
 
   def project do
@@ -43,6 +43,7 @@ defmodule ExFairness.MixProject do
   defp deps do
     [
       # Core dependencies
+      {:crucible_ir, "~> 0.1.1"},
       {:jason, "~> 1.4"},
       {:nx, "~> 0.7"},
 
@@ -126,6 +127,9 @@ defmodule ExFairness.MixProject do
         ],
         Reporting: [
           ExFairness.Report
+        ],
+        Pipeline: [
+          ExFairness.Stage
         ],
         Utilities: [
           ExFairness.Utils,

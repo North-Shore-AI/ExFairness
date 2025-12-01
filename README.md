@@ -69,7 +69,7 @@ Add `ex_fairness` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:ex_fairness, "~> 0.3.0"}
+    {:ex_fairness, "~> 0.4.0"}
   ]
 end
 ```
@@ -854,6 +854,175 @@ File.write!("fairness_audit.md", ExFairness.Report.to_markdown(report))
 
 # Machine-readable format
 File.write!("fairness_audit.json", ExFairness.Report.to_json(report))
+```
+
+---
+
+## CrucibleIR Integration (Pipeline Stage)
+
+**New in v0.4.0**: ExFairness now integrates seamlessly with the Crucible framework for LLM reliability experiments.
+
+### Pipeline Stage Usage
+
+Use `ExFairness.Stage` as a pipeline stage in Crucible experiments:
+
+```elixir
+# Configure fairness evaluation in your experiment
+config = %CrucibleIR.Reliability.Fairness{
+  enabled: true,
+  metrics: [:demographic_parity, :equalized_odds, :equal_opportunity],
+  group_by: :gender,           # Sensitive attribute field in outputs
+  threshold: 0.1,               # Maximum acceptable disparity
+  fail_on_violation: false,     # Continue even if fairness violations detected
+  options: %{                   # Optional: additional metric options
+    min_per_group: 10
+  }
+}
+
+# Your model outputs should include predictions, labels, and sensitive attributes
+model_outputs = [
+  %{prediction: 1, label: 1, gender: 0, probabilities: 0.9},
+  %{prediction: 0, label: 0, gender: 0, probabilities: 0.2},
+  %{prediction: 1, label: 1, gender: 1, probabilities: 0.85},
+  %{prediction: 0, label: 0, gender: 1, probabilities: 0.15},
+  # ... more outputs
+]
+
+# Create experiment context
+context = %{
+  experiment: %{
+    reliability: %{
+      fairness: config
+    }
+  },
+  outputs: model_outputs
+}
+
+# Run the fairness evaluation stage
+{:ok, result_context} = ExFairness.Stage.run(context)
+
+# Access fairness results
+result_context.fairness.overall_passes  # => true/false
+result_context.fairness.metrics         # => %{demographic_parity: ..., equalized_odds: ...}
+result_context.fairness.violations      # => [] or list of violations
+
+# Example violation structure:
+# [
+#   %{
+#     metric: :demographic_parity,
+#     details: %{disparity: 0.25, passes: false, ...}
+#   }
+# ]
+```
+
+### Direct Evaluation with CrucibleIR Config
+
+You can also use the `evaluate/5` function for direct evaluation:
+
+```elixir
+# Configure fairness
+config = %CrucibleIR.Reliability.Fairness{
+  enabled: true,
+  metrics: [:demographic_parity, :predictive_parity],
+  threshold: 0.1
+}
+
+# Your tensors
+predictions = Nx.tensor([1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0])
+labels = Nx.tensor([1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1])
+sensitive_attr = Nx.tensor([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+probabilities = Nx.tensor([0.9, 0.8, 0.7, 0.3, 0.2, 0.1, ...])  # Optional
+
+# Evaluate fairness
+result = ExFairness.evaluate(predictions, labels, sensitive_attr, config, probabilities)
+
+# Result structure:
+# %{
+#   metrics: %{
+#     demographic_parity: %{disparity: 0.05, passes: true, ...},
+#     predictive_parity: %{disparity: 0.03, passes: true, ...}
+#   },
+#   overall_passes: true,
+#   violations: []
+# }
+```
+
+### Integration in Crucible Pipelines
+
+```elixir
+# Example: Add fairness stage to a Crucible pipeline
+defmodule MyExperiment do
+  def run do
+    # Configure experiment
+    config = %CrucibleIR.Experiment{
+      name: "Model Fairness Evaluation",
+      reliability: %CrucibleIR.Reliability{
+        fairness: %CrucibleIR.Reliability.Fairness{
+          enabled: true,
+          metrics: [:demographic_parity, :equalized_odds],
+          group_by: :gender,
+          threshold: 0.1,
+          fail_on_violation: true  # Fail experiment if fairness violated
+        }
+      }
+    }
+
+    # Build pipeline
+    pipeline = [
+      ModelInferenceStage,      # Your model inference
+      ExFairness.Stage,          # Fairness evaluation
+      ResultsReportingStage     # Report results
+    ]
+
+    # Run experiment
+    Crucible.run_experiment(config, pipeline)
+  end
+end
+```
+
+### Supported Metrics in Stage
+
+All ExFairness metrics are supported in the pipeline stage:
+
+- `:demographic_parity` - Equal positive prediction rates
+- `:equalized_odds` - Equal TPR and FPR (requires labels)
+- `:equal_opportunity` - Equal TPR (requires labels)
+- `:predictive_parity` - Equal PPV (requires labels)
+- `:calibration` - Equal calibration (requires probabilities)
+
+### Configuration Options
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `enabled` | boolean | `true` | Enable/disable fairness evaluation |
+| `metrics` | list(atom) | `[]` | List of metrics to compute |
+| `group_by` | atom | - | Field name in outputs containing sensitive attribute |
+| `threshold` | float | `0.1` | Maximum acceptable disparity (0.0-1.0) |
+| `fail_on_violation` | boolean | `false` | Whether to fail stage if violations detected |
+| `options` | map | `%{}` | Additional options passed to metrics |
+
+### Error Handling
+
+The stage returns `{:error, reason}` in these cases:
+
+1. Invalid context (missing config or outputs)
+2. Empty outputs list
+3. Failed to extract tensors (missing fields)
+4. `fail_on_violation: true` and violations detected
+
+```elixir
+# Example error handling
+case ExFairness.Stage.run(context) do
+  {:ok, result} ->
+    if result.fairness.overall_passes do
+      IO.puts "All fairness metrics passed!"
+    else
+      IO.puts "Fairness violations: #{inspect(result.fairness.violations)}"
+    end
+
+  {:error, reason} ->
+    IO.puts "Fairness evaluation failed: #{reason}"
+end
 ```
 
 ---
