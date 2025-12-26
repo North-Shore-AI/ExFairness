@@ -32,10 +32,10 @@ defmodule ExFairness do
 
   """
 
+  alias ExFairness.Metrics.Calibration
   alias ExFairness.Metrics.DemographicParity
   alias ExFairness.Metrics.EqualizedOdds
   alias ExFairness.Metrics.EqualOpportunity
-  alias ExFairness.Metrics.Calibration
   alias ExFairness.Metrics.PredictiveParity
   alias ExFairness.Report
 
@@ -267,53 +267,88 @@ defmodule ExFairness do
         %{__struct__: CrucibleIR.Reliability.Fairness} = config,
         probabilities
       ) do
-    unless config.enabled do
-      %{metrics: %{}, overall_passes: true, violations: []}
+    if config.enabled do
+      evaluate_enabled(predictions, labels, sensitive_attr, config, probabilities)
     else
-      extra_opts = if config.options, do: Map.to_list(config.options), else: []
-      opts = [threshold: config.threshold] ++ extra_opts
-
-      # Compute each requested metric
-      metrics_results =
-        Enum.reduce(config.metrics, %{}, fn metric, acc ->
-          result =
-            case metric do
-              :demographic_parity ->
-                demographic_parity(predictions, sensitive_attr, opts)
-
-              :equalized_odds ->
-                equalized_odds(predictions, labels, sensitive_attr, opts)
-
-              :equal_opportunity ->
-                equal_opportunity(predictions, labels, sensitive_attr, opts)
-
-              :predictive_parity ->
-                predictive_parity(predictions, labels, sensitive_attr, opts)
-
-              :calibration when not is_nil(probabilities) ->
-                calibration(probabilities, labels, sensitive_attr, opts)
-
-              :calibration ->
-                %{error: "Calibration requires probabilities", passes: false}
-
-              _ ->
-                %{error: "Unknown metric: #{metric}", passes: false}
-            end
-
-          Map.put(acc, metric, result)
-        end)
-
-      # Identify violations
-      violations =
-        metrics_results
-        |> Enum.filter(fn {_metric, result} -> not Map.get(result, :passes, false) end)
-        |> Enum.map(fn {metric, result} -> %{metric: metric, details: result} end)
-
-      %{
-        metrics: metrics_results,
-        overall_passes: Enum.empty?(violations),
-        violations: violations
-      }
+      %{metrics: %{}, overall_passes: true, violations: []}
     end
+  end
+
+  defp evaluate_enabled(predictions, labels, sensitive_attr, config, probabilities) do
+    opts = build_metric_opts(config)
+
+    metrics_results =
+      compute_metrics_results(
+        config.metrics,
+        predictions,
+        labels,
+        sensitive_attr,
+        probabilities,
+        opts
+      )
+
+    violations = build_violations(metrics_results)
+
+    %{
+      metrics: metrics_results,
+      overall_passes: Enum.empty?(violations),
+      violations: violations
+    }
+  end
+
+  defp build_metric_opts(config) do
+    extra_opts = if config.options, do: Map.to_list(config.options), else: []
+    [threshold: config.threshold] ++ extra_opts
+  end
+
+  defp compute_metrics_results(
+         metrics,
+         predictions,
+         labels,
+         sensitive_attr,
+         probabilities,
+         opts
+       ) do
+    Enum.reduce(metrics, %{}, fn metric, acc ->
+      Map.put(
+        acc,
+        metric,
+        compute_metric(metric, predictions, labels, sensitive_attr, probabilities, opts)
+      )
+    end)
+  end
+
+  defp compute_metric(:demographic_parity, predictions, _labels, sensitive_attr, _probs, opts) do
+    demographic_parity(predictions, sensitive_attr, opts)
+  end
+
+  defp compute_metric(:equalized_odds, predictions, labels, sensitive_attr, _probs, opts) do
+    equalized_odds(predictions, labels, sensitive_attr, opts)
+  end
+
+  defp compute_metric(:equal_opportunity, predictions, labels, sensitive_attr, _probs, opts) do
+    equal_opportunity(predictions, labels, sensitive_attr, opts)
+  end
+
+  defp compute_metric(:predictive_parity, predictions, labels, sensitive_attr, _probs, opts) do
+    predictive_parity(predictions, labels, sensitive_attr, opts)
+  end
+
+  defp compute_metric(:calibration, _preds, _labels, _sensitive_attr, nil, _opts) do
+    %{error: "Calibration requires probabilities", passes: false}
+  end
+
+  defp compute_metric(:calibration, _preds, labels, sensitive_attr, probabilities, opts) do
+    calibration(probabilities, labels, sensitive_attr, opts)
+  end
+
+  defp compute_metric(metric, _preds, _labels, _sensitive_attr, _probs, _opts) do
+    %{error: "Unknown metric: #{metric}", passes: false}
+  end
+
+  defp build_violations(metrics_results) do
+    metrics_results
+    |> Enum.filter(fn {_metric, result} -> not Map.get(result, :passes, false) end)
+    |> Enum.map(fn {metric, result} -> %{metric: metric, details: result} end)
   end
 end

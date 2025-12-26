@@ -217,21 +217,19 @@ defmodule ExFairness.Stage do
 
   @spec compute_metrics(map(), map()) :: {:ok, map()} | {:error, String.t()}
   defp compute_metrics(tensors, config) do
-    try do
-      results =
-        Enum.reduce(config.metrics, %{}, fn metric, acc ->
-          result = compute_single_metric(metric, tensors, config)
-          Map.put(acc, metric, result)
-        end)
+    results =
+      Enum.reduce(config.metrics, %{}, fn metric, acc ->
+        result = compute_single_metric(metric, tensors, config)
+        Map.put(acc, metric, result)
+      end)
 
-      {:ok, results}
-    rescue
-      e ->
-        {:error, "Failed to compute metrics: #{Exception.message(e)}"}
-    end
+    {:ok, results}
+  rescue
+    e ->
+      {:error, "Failed to compute metrics: #{Exception.message(e)}"}
   end
 
-  @spec compute_single_metric(atom(), map(), FairnessConfig.t()) :: map()
+  @spec compute_single_metric(atom(), map(), map()) :: map()
   defp compute_single_metric(:demographic_parity, tensors, config) do
     opts = build_metric_opts(config)
     ExFairness.demographic_parity(tensors.predictions, tensors.sensitive, opts)

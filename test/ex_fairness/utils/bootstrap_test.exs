@@ -187,13 +187,13 @@ defmodule ExFairness.Utils.BootstrapTest do
       result1 =
         Bootstrap.confidence_interval([predictions, sensitive], metric_fn,
           n_samples: 100,
-          seed: 12345
+          seed: 12_345
         )
 
       result2 =
         Bootstrap.confidence_interval([predictions, sensitive], metric_fn,
           n_samples: 100,
-          seed: 12345
+          seed: 12_345
         )
 
       assert result1.confidence_interval == result2.confidence_interval

@@ -273,7 +273,7 @@ defmodule ExFairness.StageTest do
 
       assert {:ok, result} = Stage.run(context)
       assert result.fairness.overall_passes == false
-      assert length(result.fairness.violations) > 0
+      refute Enum.empty?(result.fairness.violations)
       assert Enum.any?(result.fairness.violations, fn v -> v.metric == :demographic_parity end)
     end
 

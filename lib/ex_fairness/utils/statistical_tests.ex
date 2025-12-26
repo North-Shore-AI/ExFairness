@@ -29,6 +29,8 @@ defmodule ExFairness.Utils.StatisticalTests do
 
   """
 
+  alias ExFairness.Utils.Metrics
+
   @default_alpha 0.05
   @default_n_permutations 10_000
   @default_alternative :two_sided
@@ -199,8 +201,8 @@ defmodule ExFairness.Utils.StatisticalTests do
     mask_a = Nx.equal(sensitive_attr, 0)
     mask_b = Nx.equal(sensitive_attr, 1)
 
-    cm_a = ExFairness.Utils.Metrics.confusion_matrix(predictions, labels, mask_a)
-    cm_b = ExFairness.Utils.Metrics.confusion_matrix(predictions, labels, mask_b)
+    cm_a = Metrics.confusion_matrix(predictions, labels, mask_a)
+    cm_b = Metrics.confusion_matrix(predictions, labels, mask_b)
 
     # Convert to numbers
     tp_a = Nx.to_number(cm_a.tp)
@@ -460,21 +462,27 @@ defmodule ExFairness.Utils.StatisticalTests do
     grand_total = Enum.sum(row_totals)
 
     # Compute expected frequencies and chi-square
-    observed
-    |> Enum.with_index()
-    |> Enum.reduce(0.0, fn {row, i}, chi_sq ->
-      row
-      |> Enum.with_index()
-      |> Enum.reduce(chi_sq, fn {o_ij, j}, acc ->
-        expected = Enum.at(row_totals, i) * Enum.at(col_totals, j) / grand_total
+    contributions =
+      for {row, i} <- Enum.with_index(observed),
+          {o_ij, j} <- Enum.with_index(row) do
+        expected = expected_count(row_totals, col_totals, grand_total, i, j)
+        chi_square_contribution(o_ij, expected)
+      end
 
-        if expected > 0 do
-          acc + :math.pow(o_ij - expected, 2) / expected
-        else
-          acc
-        end
-      end)
-    end)
+    Enum.sum(contributions)
+  end
+
+  @spec expected_count([number()], [number()], number(), non_neg_integer(), non_neg_integer()) ::
+          float()
+  defp expected_count(row_totals, col_totals, grand_total, row_index, col_index) do
+    Enum.at(row_totals, row_index) * Enum.at(col_totals, col_index) / grand_total
+  end
+
+  @spec chi_square_contribution(number(), number()) :: float()
+  defp chi_square_contribution(_observed, expected) when expected <= 0, do: 0.0
+
+  defp chi_square_contribution(observed, expected) do
+    :math.pow(observed - expected, 2) / expected
   end
 
   # Permute tensor values randomly

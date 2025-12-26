@@ -282,13 +282,13 @@ defmodule ExFairness.Utils.StatisticalTestsTest do
       result1 =
         StatisticalTests.permutation_test([predictions, sensitive], metric_fn,
           n_permutations: 100,
-          seed: 12345
+          seed: 12_345
         )
 
       result2 =
         StatisticalTests.permutation_test([predictions, sensitive], metric_fn,
           n_permutations: 100,
-          seed: 12345
+          seed: 12_345
         )
 
       assert result1.p_value == result2.p_value

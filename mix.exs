@@ -43,9 +43,13 @@ defmodule ExFairness.MixProject do
   defp deps do
     [
       # Core dependencies
-      {:crucible_ir, "~> 0.1.1"},
+      {:crucible_framework, "~> 0.4.0"},
+      {:crucible_ir, "~> 0.2.0"},
       {:jason, "~> 1.4"},
       {:nx, "~> 0.7"},
+      # Required by crucible_framework
+      {:ecto_sql, "~> 3.11"},
+      {:postgrex, ">= 0.0.0"},
 
       # Development and testing
       {:ex_doc, "~> 0.31", only: :dev, runtime: false},
@@ -129,7 +133,8 @@ defmodule ExFairness.MixProject do
           ExFairness.Report
         ],
         Pipeline: [
-          ExFairness.Stage
+          ExFairness.Stage,
+          ExFairness.CrucibleStage
         ],
         Utilities: [
           ExFairness.Utils,

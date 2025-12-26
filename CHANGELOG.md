@@ -7,15 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Planned for v0.5.0
-- Intersectional fairness analysis
-- Threshold optimization (post-processing mitigation)
-- Integration tests with real datasets (Adult, COMPAS, German Credit)
-- Property-based testing with StreamData
-- Performance benchmarking suite
-- Multi-class fairness support
+## [0.4.0] - 2025-12-25
 
-## [0.4.0] - 2025-11-26
+### Added
+- **ExFairness.CrucibleStage** implementing `Crucible.Stage` for crucible_framework pipelines.
+- Environment-specific config files (`config/*.exs`) to disable the CrucibleFramework repo by default.
+- Documentation snapshot and gap analysis in `docs/20251225/`.
+- Crucible stage integration test suite.
+
+### Changed
+- Refactored `ExFairness.evaluate/5` into smaller helpers for metric computation and violations.
+- Improved chi-square computation structure in `ExFairness.Utils.StatisticalTests`.
+- Updated project logo in `assets/ExFairness.svg`.
+- Dependencies: add `crucible_framework`, update `crucible_ir` to `~> 0.2.0`, add `ecto_sql` and `postgrex`.
+
+## [0.3.1] - 2025-11-26
 
 ### Added - CrucibleIR Integration
 

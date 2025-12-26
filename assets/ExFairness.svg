@@ -1,37 +1,180 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 240" width="200" height="240">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
   <defs>
-    <linearGradient id="grad_fairness" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#4A90E2;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#9ACD32;stop-opacity:1" />
+    <!-- Gold to Burgundy gradient for hexagon -->
+    <linearGradient id="hexGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#D4AF37;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#C9A227;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8B3A3A;stop-opacity:1" />
     </linearGradient>
-     <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blur"/>
-      <feOffset in="blur" dx="2" dy="2" result="offsetBlur"/>
+
+    <!-- Radial gradient for scale beam -->
+    <radialGradient id="beamGradient" cx="50%" cy="30%">
+      <stop offset="0%" style="stop-color:#F5E6D3;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#D4AF37;stop-opacity:1" />
+    </radialGradient>
+
+    <!-- Gradient for left pan (diversity 1) -->
+    <linearGradient id="panLeftGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#E8B4B8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#D4A574;stop-opacity:1" />
+    </linearGradient>
+
+    <!-- Gradient for right pan (diversity 2) -->
+    <linearGradient id="panRightGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#9B7B5E;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#B8956A;stop-opacity:1" />
+    </linearGradient>
+
+    <!-- Subtle drop shadow -->
+    <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2.5"/>
+      <feOffset dx="1" dy="2" result="offsetblur"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.3"/>
+      </feComponentTransfer>
       <feMerge>
-        <feMergeNode in="offsetBlur"/>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Inner glow effect -->
+    <filter id="innerGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
         <feMergeNode in="SourceGraphic"/>
       </feMerge>
     </filter>
   </defs>
 
-  <!-- Hexagon shape -->
-  <path d="M 100,5 L 190,62.5 L 190,177.5 L 100,235 L 10,177.5 L 10,62.5 Z"
-        fill="url(#grad_fairness)"
-        stroke="#FFFFFF"
-        stroke-width="3"/>
+  <!-- Hexagon Background -->
+  <path d="M 100,15 L 165,50 L 165,150 L 100,185 L 35,150 L 35,50 Z"
+        fill="url(#hexGradient)"
+        stroke="#F5E6D3"
+        stroke-width="2"
+        filter="url(#softShadow)"/>
 
-  <!-- Judge's Scale -->
-  <g transform="translate(100, 120) scale(0.8)" fill="none" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" filter="url(#shadow)">
-    <!-- Base -->
-    <path d="M -50,50 L 50,50 L 0,-5 Z" fill="#FFFFFF" stroke="none"/>
-    <path d="M 0,40 L 0,-20"/>
-    <!-- Beam -->
-    <path d="M -60,-20 L 60,-20"/>
-    <!-- Left Pan -->
-    <path d="M -60,-20 L -60,0"/>
-    <path d="M -80,0 A 20,10 0 0 0 -40,0"/>
-    <!-- Right Pan -->
-    <path d="M 60,-20 L 60,0"/>
-    <path d="M 40,0 A 20,10 0 0 1 80,0"/>
+  <!-- Subtle inner hexagon border for depth -->
+  <path d="M 100,18 L 162,50 L 162,150 L 100,182 L 38,150 L 38,50 Z"
+        fill="none"
+        stroke="#F5E6D3"
+        stroke-width="0.8"
+        opacity="0.5"/>
+
+  <!-- Balance Scale Group -->
+  <g transform="translate(100, 95)">
+
+    <!-- Center Fulcrum (Triangle) -->
+    <path d="M -8,25 L 8,25 L 0,8 Z"
+          fill="#2D2D2D"
+          stroke="#1A1A1A"
+          stroke-width="0.5"/>
+
+    <!-- Balance Beam -->
+    <rect x="-45" y="14" width="90" height="6"
+          rx="3"
+          fill="url(#beamGradient)"
+          stroke="#C9A227"
+          stroke-width="1"
+          filter="url(#innerGlow)"/>
+
+    <!-- Beam center pivot point -->
+    <circle cx="0" cy="17" r="3.5"
+            fill="#8B3A3A"
+            stroke="#D4AF37"
+            stroke-width="1"/>
+
+    <!-- Left Pan (for demographic 1) -->
+    <g transform="translate(-38, 15)">
+      <!-- Pan base -->
+      <ellipse cx="0" cy="12" rx="12" ry="8"
+               fill="url(#panLeftGrad)"
+               stroke="#8B3A3A"
+               stroke-width="1.2"
+               filter="url(#softShadow)"/>
+
+      <!-- Left person head -->
+      <circle cx="-4" cy="-5" r="3.5"
+              fill="#E8B4B8"
+              stroke="#8B3A3A"
+              stroke-width="0.8"/>
+
+      <!-- Left person shoulders -->
+      <path d="M -7,0 Q -4,3 -1,0"
+            fill="#D4A574"
+            stroke="#8B3A3A"
+            stroke-width="0.8"/>
+
+      <!-- Right person head -->
+      <circle cx="5" cy="-4" r="3.5"
+              fill="#D4A574"
+              stroke="#8B3A3A"
+              stroke-width="0.8"/>
+
+      <!-- Right person shoulders -->
+      <path d="M 2,1 Q 5,4 8,1"
+            fill="#C9A227"
+            stroke="#8B3A3A"
+            stroke-width="0.8"/>
+    </g>
+
+    <!-- Right Pan (for demographic 2) -->
+    <g transform="translate(38, 15)">
+      <!-- Pan base -->
+      <ellipse cx="0" cy="12" rx="12" ry="8"
+               fill="url(#panRightGrad)"
+               stroke="#8B3A3A"
+               stroke-width="1.2"
+               filter="url(#softShadow)"/>
+
+      <!-- Left person head -->
+      <circle cx="-5" cy="-5" r="3.5"
+              fill="#9B7B5E"
+              stroke="#8B3A3A"
+              stroke-width="0.8"/>
+
+      <!-- Left person shoulders -->
+      <path d="M -8,0 Q -5,3 -2,0"
+            fill="#B8956A"
+            stroke="#8B3A3A"
+            stroke-width="0.8"/>
+
+      <!-- Right person head -->
+      <circle cx="4" cy="-4" r="3.5"
+              fill="#B8956A"
+              stroke="#8B3A3A"
+              stroke-width="0.8"/>
+
+      <!-- Right person shoulders -->
+      <path d="M 1,1 Q 4,4 7,1"
+            fill="#A0826D"
+            stroke="#8B3A3A"
+            stroke-width="0.8"/>
+    </g>
+
+    <!-- Connection bars from beam to pans -->
+    <line x1="-38" y1="20" x2="-38" y2="25"
+          stroke="#C9A227"
+          stroke-width="1.2"
+          opacity="0.8"/>
+
+    <line x1="38" y1="20" x2="38" y2="25"
+          stroke="#C9A227"
+          stroke-width="1.2"
+          opacity="0.8"/>
+  </g>
+
+  <!-- Decorative equality symbols at bottom -->
+  <g transform="translate(50, 155)" opacity="0.7">
+    <!-- Three horizontal lines (equality) -->
+    <line x1="0" y1="0" x2="12" y2="0" stroke="#F5E6D3" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="0" y1="3" x2="12" y2="3" stroke="#F5E6D3" stroke-width="1.5" stroke-linecap="round"/>
+  </g>
+
+  <g transform="translate(138, 155)" opacity="0.7">
+    <!-- Three horizontal lines (equality) -->
+    <line x1="0" y1="0" x2="12" y2="0" stroke="#F5E6D3" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="0" y1="3" x2="12" y2="3" stroke="#F5E6D3" stroke-width="1.5" stroke-linecap="round"/>
   </g>
 </svg>
