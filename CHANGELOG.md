@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2025-12-27
+
+### Changed
+- **Normalized describe/1 to canonical schema format** - The `describe/1` callback now returns a schema conforming to the Crucible Stage contract specification v1.0.
+  - Changed `:stage` key to `:name` key (atom value)
+  - Added `__schema_version__: "1.0.0"` marker for schema evolution
+  - Added `required` field (list of required option keys)
+  - Added `optional` field (list of optional option keys)
+  - Added `types` field (type specifications for all options)
+  - Added `defaults` field (default values for optional options)
+  - Moved `metrics` list to `__extensions__.fairness.supported_metrics`
+  - Added `data_sources` and `output_location` to extensions
+
+### Added
+- **Conformance tests** - New `test/ex_fairness/conformance_test.exs` validates Stage contract compliance
+- **Extended describe/1 tests** - Comprehensive tests for canonical schema format
+
+### Dependencies
+- Updated `crucible_framework` dependency to `~> 0.5.0` (required for new describe/1 contract)
+
 ## [0.4.0] - 2025-12-25
 
 ### Added

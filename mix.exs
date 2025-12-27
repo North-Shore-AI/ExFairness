@@ -1,7 +1,7 @@
 defmodule ExFairness.MixProject do
   use Mix.Project
 
-  @version "0.4.0"
+  @version "0.5.0"
   @source_url "https://github.com/North-Shore-AI/ExFairness"
 
   def project do
@@ -43,13 +43,13 @@ defmodule ExFairness.MixProject do
   defp deps do
     [
       # Core dependencies
-      {:crucible_framework, "~> 0.4.0"},
-      {:crucible_ir, "~> 0.2.0"},
+      {:crucible_framework, "~> 0.5.0"},
+      {:crucible_ir, "~> 0.2.1"},
       {:jason, "~> 1.4"},
       {:nx, "~> 0.7"},
       # Required by crucible_framework
       {:ecto_sql, "~> 3.11"},
-      {:postgrex, ">= 0.0.0"},
+      {:postgrex, ">= 0.21.1"},
 
       # Development and testing
       {:ex_doc, "~> 0.31", only: :dev, runtime: false},

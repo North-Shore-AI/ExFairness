@@ -69,7 +69,7 @@ defmodule ExFairness.CrucibleStage do
 
   @behaviour Crucible.Stage
 
-  @version "0.4.0"
+  @version "0.5.0"
 
   @supported_metrics [
     :demographic_parity,
@@ -93,7 +93,7 @@ defmodule ExFairness.CrucibleStage do
   # ============================================================================
 
   @doc """
-  Returns metadata about the fairness evaluation stage.
+  Returns metadata about the fairness evaluation stage in canonical schema format.
 
   ## Parameters
 
@@ -101,26 +101,83 @@ defmodule ExFairness.CrucibleStage do
 
   ## Returns
 
-  A map containing stage metadata including name, description, version, and supported metrics.
+  A map containing stage metadata in canonical schema format with:
+  - `__schema_version__` - Schema version marker
+  - `name` - Stage identifier (atom)
+  - `description` - Human-readable description
+  - `required` - Required option keys
+  - `optional` - Optional option keys
+  - `types` - Type specifications for options
+  - `defaults` - Default values for optional options
+  - `version` - Package version
+  - `__extensions__` - Fairness-specific metadata
 
   ## Examples
 
-      iex> ExFairness.CrucibleStage.describe(%{})
-      %{
-        stage: :fairness,
-        description: "Evaluates fairness metrics on model predictions",
-        version: "0.4.0",
-        metrics: [:demographic_parity, :equalized_odds, :equal_opportunity, :predictive_parity, :calibration]
-      }
+      iex> schema = ExFairness.CrucibleStage.describe(%{})
+      iex> schema.name
+      :fairness
+      iex> schema.__schema_version__
+      "1.0.0"
+      iex> is_list(schema.required)
+      true
   """
   @impl Crucible.Stage
   @spec describe(opts()) :: map()
   def describe(_opts \\ %{}) do
     %{
-      stage: :fairness,
+      __schema_version__: "1.0.0",
+      name: :fairness,
       description: "Evaluates fairness metrics on model predictions",
+      required: [],
+      optional: [:metrics, :group_by, :threshold, :fail_on_violation, :options],
+      types: %{
+        metrics:
+          {:list,
+           {:enum,
+            [
+              :demographic_parity,
+              :equalized_odds,
+              :equal_opportunity,
+              :predictive_parity,
+              :calibration
+            ]}},
+        group_by: :atom,
+        threshold: :float,
+        fail_on_violation: :boolean,
+        options: :map
+      },
+      defaults: %{
+        metrics: [:demographic_parity, :equalized_odds],
+        group_by: :gender,
+        threshold: 0.1,
+        fail_on_violation: false,
+        options: %{}
+      },
       version: @version,
-      metrics: @supported_metrics
+      __extensions__: %{
+        fairness: %{
+          supported_metrics: @supported_metrics,
+          data_sources: [
+            %{
+              name: :assigns,
+              fields: [
+                :fairness_predictions,
+                :fairness_labels,
+                :fairness_sensitive,
+                :fairness_probabilities
+              ],
+              preferred: true
+            },
+            %{
+              name: :outputs,
+              fields: [:prediction, :label, :group_by_field],
+              fallback: true
+            }
+          ],
+          output_location: [:metrics, :fairness]
+        }
+      }
     }
   end
 

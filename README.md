@@ -1025,6 +1025,57 @@ case ExFairness.Stage.run(context) do
 end
 ```
 
+### Stage Contract
+
+`ExFairness.CrucibleStage` implements the `Crucible.Stage` behaviour with a canonical schema format.
+
+#### Options
+
+- `:metrics` - List of fairness metrics to evaluate (default: `[:demographic_parity, :equalized_odds]`)
+- `:group_by` - Sensitive attribute field name (default: `:gender`)
+- `:threshold` - Maximum acceptable disparity (default: `0.1`)
+- `:fail_on_violation` - Whether to fail experiment on fairness violation (default: `false`)
+- `:options` - Additional metric-specific options (default: `%{}`)
+
+#### Schema Introspection
+
+The `describe/1` callback returns a canonical schema for tooling integration:
+
+```elixir
+schema = ExFairness.CrucibleStage.describe(%{})
+
+# Returns:
+%{
+  __schema_version__: "1.0.0",
+  name: :fairness,
+  description: "Evaluates fairness metrics on model predictions",
+  required: [],
+  optional: [:metrics, :group_by, :threshold, :fail_on_violation, :options],
+  types: %{
+    metrics: {:list, {:enum, [...]}},
+    group_by: :atom,
+    threshold: :float,
+    fail_on_violation: :boolean,
+    options: :map
+  },
+  defaults: %{
+    metrics: [:demographic_parity, :equalized_odds],
+    group_by: :gender,
+    threshold: 0.1,
+    fail_on_violation: false,
+    options: %{}
+  },
+  version: "0.5.0",
+  __extensions__: %{
+    fairness: %{
+      supported_metrics: [...],
+      data_sources: [...],
+      output_location: [:metrics, :fairness]
+    }
+  }
+}
+```
+
 ---
 
 ## Advanced Usage

@@ -126,15 +126,34 @@ defmodule ExFairness.CrucibleStageTest do
   end
 
   describe "describe/1" do
+    test "returns canonical schema format" do
+      schema = CrucibleStage.describe(%{})
+
+      # Must use :name key, not :stage
+      assert Map.has_key?(schema, :name)
+      refute Map.has_key?(schema, :stage)
+
+      # Name must be atom
+      assert schema.name == :fairness
+      assert is_atom(schema.name)
+
+      # Core fields
+      assert is_binary(schema.description)
+      assert is_list(schema.required)
+      assert is_list(schema.optional)
+      assert is_map(schema.types)
+    end
+
     test "returns map with stage metadata" do
       result = CrucibleStage.describe(%{})
       assert is_map(result)
     end
 
-    test "contains :stage key" do
+    test "contains :name key (canonical format)" do
       result = CrucibleStage.describe(%{})
-      assert Map.has_key?(result, :stage)
-      assert result.stage == :fairness
+      assert Map.has_key?(result, :name)
+      assert result.name == :fairness
+      assert is_atom(result.name)
     end
 
     test "contains :description key" do
@@ -149,12 +168,65 @@ defmodule ExFairness.CrucibleStageTest do
       assert Map.has_key?(result, :version)
     end
 
-    test "contains :metrics key listing available metrics" do
+    test "contains __schema_version__ key" do
       result = CrucibleStage.describe(%{})
-      assert Map.has_key?(result, :metrics)
-      assert is_list(result.metrics)
-      assert :demographic_parity in result.metrics
-      assert :equalized_odds in result.metrics
+      assert Map.has_key?(result, :__schema_version__)
+      assert result.__schema_version__ == "1.0.0"
+    end
+
+    test "all optional fields have types" do
+      schema = CrucibleStage.describe(%{})
+
+      for key <- schema.optional do
+        assert Map.has_key?(schema.types, key),
+               "Optional field #{key} missing from types"
+      end
+    end
+
+    test "contains defaults for optional fields" do
+      schema = CrucibleStage.describe(%{})
+      assert Map.has_key?(schema, :defaults)
+      assert is_map(schema.defaults)
+
+      # All defaults keys must be in optional
+      for key <- Map.keys(schema.defaults) do
+        assert key in schema.optional,
+               "Default key #{key} not in optional list"
+      end
+    end
+
+    test "extensions contain supported metrics" do
+      schema = CrucibleStage.describe(%{})
+
+      assert Map.has_key?(schema, :__extensions__)
+      assert Map.has_key?(schema.__extensions__, :fairness)
+
+      assert schema.__extensions__.fairness.supported_metrics == [
+               :demographic_parity,
+               :equalized_odds,
+               :equal_opportunity,
+               :predictive_parity,
+               :calibration
+             ]
+    end
+
+    test "extensions contain data sources" do
+      schema = CrucibleStage.describe(%{})
+
+      assert Map.has_key?(schema.__extensions__.fairness, :data_sources)
+      data_sources = schema.__extensions__.fairness.data_sources
+      assert is_list(data_sources)
+      assert length(data_sources) == 2
+
+      # Check assigns source
+      assigns_source = Enum.find(data_sources, &(&1.name == :assigns))
+      assert assigns_source != nil
+      assert assigns_source.preferred == true
+
+      # Check outputs source
+      outputs_source = Enum.find(data_sources, &(&1.name == :outputs))
+      assert outputs_source != nil
+      assert outputs_source.fallback == true
     end
   end
 
