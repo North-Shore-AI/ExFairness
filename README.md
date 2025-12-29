@@ -69,7 +69,7 @@ Add `ex_fairness` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:ex_fairness, "~> 0.4.0"}
+    {:ex_fairness, "~> 0.5.1"}
   ]
 end
 ```
