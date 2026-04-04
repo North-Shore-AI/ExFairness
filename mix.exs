@@ -52,7 +52,7 @@ defmodule ExFairness.MixProject do
       {:postgrex, ">= 0.21.1"},
 
       # Development and testing
-      {:ex_doc, "~> 0.31", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.40.0", only: :dev, runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.18", only: :test},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
@@ -68,7 +68,7 @@ defmodule ExFairness.MixProject do
     [
       name: "ex_fairness",
       description: description(),
-      files: ~w(lib mix.exs README.md CHANGELOG.md CONTRIBUTING.md LICENSE docs),
+      files: ~w(lib assets mix.exs README.md CHANGELOG.md CONTRIBUTING.md LICENSE docs),
       licenses: ["MIT"],
       links: %{
         "GitHub" => @source_url,
